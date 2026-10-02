@@ -56,9 +56,12 @@ const N=20,cv=document.getElementById('c'),x=cv.getContext('2d'),ov=document.get
 let S,cell,state='ready',snake,dir,q,food,gold,score,best=0,lv,speed,acc=0,last=0,wrap=false,slow=0,eaten,parts=[],shake=0,hue=130;
 try{best=+localStorage.getItem('snakeBest')||0}catch(e){}
 bs.textContent=best;
-function size(){S=Math.floor(Math.min(innerWidth*.94,(innerHeight-330),520)/N)*N;cell=S/N;const d=Math.min(devicePixelRatio||1,2);
+function size(){const vh=window.visualViewport?visualViewport.height:innerHeight,wr=document.getElementById('wrap');
+ const kids=[...document.body.children].filter(e=>e.tagName!=='SCRIPT');
+ const others=kids.filter(e=>e!==wr).reduce((a,e)=>a+e.offsetHeight,0)+12*(kids.length-1);
+ S=Math.floor(Math.max(200,Math.min(innerWidth-24,vh-others-30,640))/N)*N;cell=S/N;const d=Math.min(devicePixelRatio||1,2);
  cv.style.width=cv.style.height=S+'px';cv.width=cv.height=S*d;x.setTransform(d,0,0,d,0,0);document.documentElement.style.setProperty('--w',S+'px')}
-size();addEventListener('resize',size);
+size();addEventListener('resize',size);addEventListener('load',size);if(document.fonts)document.fonts.ready.then(size);
 let ac;function beep(f,d=.08,t='square',v=.07){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();
  const o=ac.createOscillator(),g=ac.createGain();o.type=t;o.frequency.value=f;g.gain.setValueAtTime(v,ac.currentTime);g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+d);
  o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
