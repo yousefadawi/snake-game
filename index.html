@@ -32,6 +32,9 @@ canvas{display:block}
 #ov p{margin:0;opacity:.85}
 button{font:800 1rem Tajawal;border:0;border-radius:99px;padding:11px 24px;background:#3ddc6a;color:#062010;cursor:pointer;box-shadow:0 4px 0 #1b8a3b}
 button:active{transform:translateY(3px);box-shadow:0 1px 0 #1b8a3b}
+.modes{display:flex;gap:6px;margin:6px 0;flex-wrap:wrap;justify-content:center}
+.modes button{background:#16291f;color:#eafff0;box-shadow:0 3px 0 #0006;padding:8px 12px;font-size:.9rem;border:2px solid transparent}
+.modes button.on{background:#3ddc6a;color:#062010;border-color:#fff}
 .row{display:flex;gap:8px}
 .row button{background:var(--card);color:var(--ink);box-shadow:0 3px 0 #0003;font-size:.9rem;padding:8px 16px}
 .dpad{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,58px);gap:8px;direction:ltr}
@@ -41,9 +44,9 @@ button:active{transform:translateY(3px);box-shadow:0 1px 0 #1b8a3b}
 </head>
 <body>
 <h1>الدودة <span>🐍</span></h1>
-<div class="hud" id="hud"><div class="pill">النقاط<b id="sc">0</b></div><div class="pill">الأفضل<b id="bs">0</b></div><div class="pill">المستوى<b id="lv">1</b></div></div>
+<div class="hud" id="hud"><div class="pill">النقاط<b id="sc">0</b></div><div class="pill"><span id="bl">الأفضل</span><b id="bs">0</b></div><div class="pill">المستوى<b id="lv">1</b></div></div>
 <div class="wrap" id="wrap"><canvas id="c"></canvas>
-<div id="ov"><h2 id="ot">جاهز؟</h2><p id="om">اسحب بإصبعك أو استخدم الأسهم</p><button id="ob">ابدأ اللعب</button></div></div>
+<div id="ov"><h2 id="ot">جاهز؟</h2><p id="om">اختار السرعة وابدأ فورًا 👇</p><div class="modes" id="modes"></div><button id="ob">ابدأ اللعب</button></div></div>
 <div class="row"><button id="wl">الجدران: قاتلة 🧱</button><button id="ps">إيقاف ⏸</button></div>
 <div class="dpad">
 <button data-d="0,-1" style="grid-column:2;grid-row:1" aria-label="فوق">▲</button>
@@ -54,8 +57,12 @@ button:active{transform:translateY(3px);box-shadow:0 1px 0 #1b8a3b}
 <script>
 const N=20,cv=document.getElementById('c'),x=cv.getContext('2d'),ov=document.getElementById('ov');
 let S,cell,state='ready',snake,dir,q,food,gold,score,best=0,lv,speed,acc=0,last=0,wrap=false,slow=0,eaten,parts=[],shake=0,hue=130;
-try{best=+localStorage.getItem('snakeBest')||0}catch(e){}
-bs.textContent=best;
+const M=[{n:'هادي',e:'🐢',b:190,m:115,d:8},{n:'عادي',e:'🐍',b:140,m:65,d:9},{n:'سريع',e:'🚀',b:95,m:42,d:6}];
+let mode=1;try{const m=localStorage.getItem('snakeMode');if(m!==null&&M[+m])mode=+m}catch(e){}
+function loadBest(){try{best=+localStorage.getItem('snakeBest'+mode)||0}catch(e){best=0}bs.textContent=best;bl.textContent='الأفضل · '+M[mode].n}
+function drawModes(){modes.innerHTML='';M.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o.e+' '+o.n;if(i===mode)b.className='on';
+ b.onclick=()=>{mode=i;try{localStorage.setItem('snakeMode',i)}catch(e){}loadBest();drawModes();ob.style.display='none';start()};modes.append(b)})}
+loadBest();drawModes();
 function size(){const vh=window.visualViewport?visualViewport.height:innerHeight,wr=document.getElementById('wrap');
  const kids=[...document.body.children].filter(e=>e.tagName!=='SCRIPT');
  const others=kids.filter(e=>e!==wr).reduce((a,e)=>a+e.offsetHeight,0)+12*(kids.length-1);
@@ -66,7 +73,7 @@ let ac;function beep(f,d=.08,t='square',v=.07){try{ac=ac||new (window.AudioConte
  const o=ac.createOscillator(),g=ac.createGain();o.type=t;o.frequency.value=f;g.gain.setValueAtTime(v,ac.currentTime);g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+d);
  o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
 const free=()=>{let p;do{p={x:Math.random()*N|0,y:Math.random()*N|0}}while(snake.some(s=>s.x==p.x&&s.y==p.y)||(food&&food.x==p.x&&food.y==p.y)||(gold&&gold.x==p.x&&gold.y==p.y));return p};
-function reset(){snake=[{x:10,y:10},{x:9,y:10},{x:8,y:10}];dir={x:1,y:0};q=[];score=0;lv=1;speed=140;eaten=0;gold=null;slow=0;food=null;food=free();hud()}
+function reset(){snake=[{x:10,y:10},{x:9,y:10},{x:8,y:10}];dir={x:1,y:0};q=[];score=0;lv=1;speed=M[mode].b;eaten=0;gold=null;slow=0;food=null;food=free();hud()}
 function hud(){sc.textContent=score;bs.textContent=best;lv_.textContent=lv}
 const lv_=document.getElementById('lv');
 function start(){reset();state='run';ov.style.display='none';last=performance.now();acc=0;beep(520,.1)}
@@ -83,15 +90,15 @@ document.querySelectorAll('.dpad button').forEach(b=>b.addEventListener('pointer
  const [dx,dy]=b.dataset.d.split(',').map(Number);
  if(state==='pause')pause();else if(state!=='run')start();
  turn(dx,dy);beep(300,.03,'square',.03)}));
-function pause(){if(state==='run'){state='pause';ov.style.display='flex';ot.textContent='متوقفة ⏸';om.textContent='خذ نفس…';ob.textContent='كمّل'}
+function pause(){if(state==='run'){state='pause';ov.style.display='flex';modes.style.display='none';ob.style.display='';ot.textContent='متوقفة ⏸';om.textContent='خذ نفس…';ob.textContent='كمّل'}
  else if(state==='pause'){state='run';ov.style.display='none';last=performance.now()}}
 ob.onclick=()=>state==='pause'?pause():start();ps.onclick=pause;
 wl.onclick=()=>{wrap=!wrap;wl.textContent=wrap?'الجدران: عبور 🌀':'الجدران: قاتلة 🧱'};
 function boom(px,py,c,n=14){for(let i=0;i<n;i++){const a=Math.random()*6.3,s=1+Math.random()*3;parts.push({x:px,y:py,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:1,c})}}
 function over(){state='over';shake=14;beep(120,.4,'sawtooth',.12);
- const nb=score>best;if(nb){best=score;try{localStorage.setItem('snakeBest',best)}catch(e){}}hud();
+ const nb=score>best;if(nb){best=score;try{localStorage.setItem('snakeBest'+mode,best)}catch(e){}}hud();
  boom(snake[0].x*cell+cell/2,snake[0].y*cell+cell/2,'#ff5a5a',30);
- setTimeout(()=>{ov.style.display='flex';ot.textContent=nb&&score>0?'🏆 رقم قياسي!':'خسرت 💀';om.textContent=`جمعت ${score} نقطة · طوّلت ${snake.length} مربع`;ob.textContent='العب مرة تانية'},600)}
+ setTimeout(()=>{ov.style.display='flex';modes.style.display='flex';ob.style.display='none';ot.textContent=nb&&score>0?'🏆 رقم قياسي!':'خسرت 💀';om.textContent=`جمعت ${score} نقطة · اختار سرعة وعيد 👇`;ob.textContent='العب مرة تانية'},600)}
 function step(){if(q.length)dir=q.shift();let h={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
  if(wrap){h.x=(h.x+N)%N;h.y=(h.y+N)%N}else if(h.x<0||h.y<0||h.x>=N||h.y>=N)return over();
  if(snake.some((s,i)=>i<snake.length-1&&s.x==h.x&&s.y==h.y))return over();
@@ -101,7 +108,7 @@ function step(){if(q.length)dir=q.shift();let h={x:snake[0].x+dir.x,y:snake[0].y
  if(gold&&h.x==gold.x&&h.y==gold.y){grow=true;score+=5;slow=4000;beep(880,.2,'sine',.12);setTimeout(()=>beep(1175,.3,'sine',.12),90);boom(h.x*cell+cell/2,h.y*cell+cell/2,'#ffd23f',34);gold=null;shake=6;snake.push({...snake[snake.length-1]})}
  if(!grow)snake.pop();
  const nl=1+Math.floor(score/8);if(nl>lv){lv=nl;hue=(hue+55)%360;beep(990,.25,'sine',.1)}
- speed=Math.max(65,140-(lv-1)*9);hud()}
+ speed=Math.max(M[mode].m,M[mode].b-(lv-1)*M[mode].d);hud()}
 function loop(t){const dt=Math.min(t-last,100);last=t;
  if(state==='run'){acc+=dt;if(slow>0)slow-=dt;if(gold){gold.t-=dt;if(gold.t<=0)gold=null}
   const sp=slow>0?speed*1.7:speed;while(acc>=sp&&state==='run'){acc-=sp;step()}}
